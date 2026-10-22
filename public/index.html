@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>סוכן קולי</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111; --panel:#1b1b1b; --line:#333; --muted:#9a9a9a; --accent:#7cc4ff; --danger:#ff6b6b; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #eee; }
+    header, main { max-width: 960px; margin: 0 auto; padding: 1rem 16px; }
+    header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    h1 { font-size: 1.3rem; margin: 0; flex: 1; }
+    h2 { font-size: 1rem; margin: 0 0 .5rem; color: var(--accent); }
+    button { font: inherit; padding: .55rem 1.3rem; border: 0; border-radius: 999px; cursor: pointer; }
+    button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    button:disabled { opacity: .5; cursor: default; }
+    #status { color: var(--muted); }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: start; padding: .4rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; white-space: pre-wrap; }
+    th { color: var(--muted); font-weight: 500; }
+    .empty { color: var(--muted); font-style: italic; }
+    #events { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    #events li { padding: .4rem 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+    #events time { color: var(--muted); margin-inline-end: .5rem; }
+    #events code { color: var(--accent); direction: ltr; unicode-bidi: embed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>סוכן קולי בעברית</h1>
+    <span id="status">מנותק</span>
+    <button id="mute" hidden>השתק מיקרופון</button>
+    <button id="toggle">התחל שיחה</button>
+  </header>
+  <main>
+    <section>
+      <h2>אירועי זיכרון בזמן אמת</h2>
+      <ul id="events"><li class="empty">עדיין לא נשמר דבר בשיחה הזו</li></ul>
+    </section>
+    <section><h2>פרופיל</h2><div id="profile"></div></section>
+    <section><h2>יקירים שנפטרו</h2><div id="deceased"></div></section>
+    <section><h2>העדפות למצב חברותי</h2><div id="companion"></div></section>
+    <section><h2>סיכומי שיחות</h2><div id="calls"></div></section>
+    <button id="clear" class="danger">מחק את כל ההיסטוריה</button>
+  </main>
+  <script type="module" src="/client.js"></script>
+</body>
+</html>
