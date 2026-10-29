@@ -19,6 +19,7 @@
     "@langchain/openai": "^1.6.2",
     "@livekit/agents": "^1.9.2",
     "@livekit/agents-plugin-openai": "^1.9.2",
+    "@livekit/noise-cancellation-node": "^0.3.0",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.7",
     "livekit-server-sdk": "^2.19.1",

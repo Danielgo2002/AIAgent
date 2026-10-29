@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { cli, defineAgent, ServerOptions, voice, type JobContext } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
+import * as noiseCancellation from '@livekit/noise-cancellation-node';
 import { ParticipantKind } from '@livekit/rtc-node';
 import { loadEnv } from '../config/env.js';
 import { resolveUserId } from '../memory/caller-identity.js';
@@ -139,7 +140,13 @@ export default defineAgent({
       createIdoMasalaTool(publishEvent),
     ]);
 
-    await session.start({ agent: assistant, room: ctx.room });
+    await session.start({
+      agent: assistant,
+      room: ctx.room,
+      ...(isSip && env.PHONE_AUDIO_CLEANUP === 'bvc'
+        ? { inputOptions: { noiseCancellation: noiseCancellation.TelephonyBackgroundVoiceCancellation() } }
+        : {}),
+    });
     callLog.info('agent ready, greeting');
     session.generateReply({ instructions: buildGreeting(memoryBlock !== '') });
   },
