@@ -1,4 +1,4 @@
-import { getToken, setToken } from './api.js';
+import { getToken, setToken, Unauthorized } from './api.js';
 import { initCall } from './call.js';
 import { startDashboard } from './dashboard.js';
 
@@ -15,7 +15,7 @@ function start() {
   $('app').hidden = false;
   startDashboard(() => showGate('הטוקן לא תקין')).catch((err) => {
     console.error(err);
-    showGate('הטוקן לא תקין');
+    showGate(err instanceof Unauthorized ? 'הטוקן לא תקין' : `שגיאה בטעינת הנתונים: ${err.message}`);
   });
 }
 

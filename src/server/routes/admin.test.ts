@@ -40,6 +40,14 @@ describe('admin routes', () => {
     expect((await app.inject({ method: 'GET', url: `/api/users/${UID}/memory`, headers: auth })).statusCode).toBe(404);
   });
 
+  it('accepts the demo user id, which has no standard uuid version digit', async () => {
+    const demo = '00000000-0000-0000-0000-000000000001';
+    const findMemory = vi.fn().mockResolvedValue({ user: { id: demo }, deceased: [], companion: [], recentSummaries: [] });
+    const res = await (await build({ findMemory })).inject({ method: 'GET', url: `/api/users/${demo}/memory`, headers: auth });
+    expect(res.statusCode).toBe(200);
+    expect(findMemory).toHaveBeenCalledWith(demo);
+  });
+
   it('deletes a user (204) and reports 404 when it did not exist', async () => {
     const deleteUser = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const app = await build({ deleteUser });

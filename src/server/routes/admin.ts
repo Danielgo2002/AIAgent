@@ -10,7 +10,9 @@ const listQuery = z.object({
   q: z.string().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
 });
-const idParams = z.object({ id: z.string().uuid() });
+// Deliberately not z.string().uuid(): that rejects ids without a standard version digit, such as the demo user's.
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const idParams = z.object({ id: z.string().regex(UUID_SHAPE) });
 
 export interface AdminRoutesOptions {
   repo: MemoryRepository;
