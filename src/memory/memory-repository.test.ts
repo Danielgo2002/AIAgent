@@ -130,6 +130,16 @@ describe('DrizzleMemoryRepository', () => {
     expect((await repo.listUsers({ q: 'יצח' })).map((u) => u.id)).toEqual([b]);
   });
 
+  it('listUsers finds a caller by a full number or by partial digits', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('7'.repeat(64), '9405');
+    await repo.findOrCreateUserByPhoneHash('8'.repeat(64), '1111');
+    expect((await repo.listUsers({ q: '+972501239405' })).map((u) => u.id)).toEqual([a]);
+    expect((await repo.listUsers({ q: '050-123-9405' })).map((u) => u.id)).toEqual([a]);
+    expect((await repo.listUsers({ q: '940' })).map((u) => u.id)).toEqual([a]);
+    expect((await repo.listUsers({ q: '05' })).map((u) => u.id)).toEqual([a]);
+    expect(await repo.listUsers({ q: '777' })).toEqual([]);
+  });
+
   it('listUsers treats % and _ in the search as plain characters', async () => {
     const a = await repo.findOrCreateUserByPhoneHash('3'.repeat(64), '3333');
     await repo.updateUser(a, { firstName: 'דניאל' });

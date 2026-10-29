@@ -53,6 +53,10 @@ export class DrizzleMemoryRepository implements MemoryRepository {
     const term = q.trim();
     const pattern = `%${escapeLike(term)}%`;
     const capped = Math.min(Math.max(limit, 1), MAX_LIST);
+    // Typed digits search the stored last 4: a full number matches on its final 4 digits, 1-3 digits match anywhere in them.
+    const digits = term.replace(/\D/g, '');
+    const phoneExact = digits.length >= 4 ? digits.slice(-4) : null;
+    const phoneContains = digits.length >= 1 && digits.length < 4 ? `%${digits}%` : null;
     const result = await this.db.execute(sql`
       select u.id,
              u.first_name as "firstName",
@@ -63,7 +67,8 @@ export class DrizzleMemoryRepository implements MemoryRepository {
       from users u
       where ${term} = ''
          or u.first_name ilike ${pattern} escape '\\'
-         or u.phone_last4 = ${term}
+         or u.phone_last4 = ${phoneExact}
+         or u.phone_last4 like ${phoneContains}
          or exists (select 1 from deceased d where d.user_id = u.id and d.name ilike ${pattern} escape '\\')
       order by "lastCallAt" desc nulls last, u.created_at desc
       limit ${capped}
