@@ -10,6 +10,9 @@ const fakeRepo = (overrides: Partial<MemoryRepository> = {}): MemoryRepository =
   addCompanionNote: vi.fn().mockResolvedValue(undefined),
   findOrCreateUserByPhoneHash: vi.fn(),
   clearMemory: vi.fn(),
+  listUsers: vi.fn(),
+  findMemory: vi.fn(),
+  deleteUser: vi.fn(),
   ...overrides,
 });
 

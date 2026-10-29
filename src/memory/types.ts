@@ -46,6 +46,20 @@ export interface UserMemory {
   recentSummaries: (typeof callSummaries.$inferSelect)[];
 }
 
+export interface UserListItem {
+  id: string;
+  firstName: string | null;
+  phoneLast4: string | null;
+  lastCallAt: Date | null;
+  callCount: number;
+  deceasedCount: number;
+}
+
+export interface ListUsersParams {
+  q?: string;
+  limit?: number;
+}
+
 export interface MemoryRepository {
   loadMemory(userId: string): Promise<UserMemory>;
   upsertDeceased(userId: string, input: DeceasedInput): Promise<void>;
@@ -56,4 +70,9 @@ export interface MemoryRepository {
   findOrCreateUserByPhoneHash(phoneHash: string, last4?: string): Promise<string>;
   /** Deletes the user and, by cascade, all their memory. */
   clearMemory(userId: string): Promise<void>;
+  listUsers(params?: ListUsersParams): Promise<UserListItem[]>;
+  /** Read-only: returns null for an unknown user and creates nothing. Includes all call summaries. */
+  findMemory(userId: string): Promise<UserMemory | null>;
+  /** Deletes the user and everything cascaded from them; returns false if there was no such user. */
+  deleteUser(userId: string): Promise<boolean>;
 }

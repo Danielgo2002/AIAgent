@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import type { DrizzleMemoryRepository } from './memory-repository.js';
+import { escapeLike, type DrizzleMemoryRepository } from './memory-repository.js';
 import { createTestRepo } from './test-support.js';
 
 const USER = '00000000-0000-0000-0000-000000000001';
@@ -117,5 +117,63 @@ describe('DrizzleMemoryRepository', () => {
     expect((await repo.loadMemory(id)).user.phoneLast4).toBe('4567');
     await repo.findOrCreateUserByPhoneHash('f'.repeat(64), '9999');
     expect((await repo.loadMemory(id)).user.phoneLast4).toBe('4567');
+  });
+
+  it('listUsers searches by first name, last 4 digits and deceased name, newest call first', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('1'.repeat(64), '1111');
+    const b = await repo.findOrCreateUserByPhoneHash('2'.repeat(64), '2222');
+    await repo.updateUser(a, { firstName: 'דניאל' });
+    await repo.upsertDeceased(b, { name: 'יצחק' });
+    expect((await repo.listUsers()).map((u) => u.id).sort()).toEqual([a, b].sort());
+    expect((await repo.listUsers({ q: 'דני' })).map((u) => u.id)).toEqual([a]);
+    expect((await repo.listUsers({ q: '2222' })).map((u) => u.id)).toEqual([b]);
+    expect((await repo.listUsers({ q: 'יצח' })).map((u) => u.id)).toEqual([b]);
+  });
+
+  it('listUsers treats % and _ in the search as plain characters', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('3'.repeat(64), '3333');
+    await repo.updateUser(a, { firstName: 'דניאל' });
+    expect(await repo.listUsers({ q: '%' })).toEqual([]);
+    expect(await repo.listUsers({ q: '_' })).toEqual([]);
+  });
+
+  it('listUsers reports call and deceased counts', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('4'.repeat(64), '4444');
+    await repo.upsertDeceased(a, { name: 'דוד' });
+    await repo.saveCallSummary(a, { startedAt: new Date(), endedAt: new Date(), summary: 's', openThreads: [] });
+    const [row] = await repo.listUsers({ q: '4444' });
+    expect(row).toMatchObject({ callCount: 1, deceasedCount: 1 });
+    expect(row?.lastCallAt).toBeInstanceOf(Date);
+  });
+
+  it('findMemory returns null for an unknown user and does not create it', async () => {
+    const unknown = '99999999-9999-4999-8999-999999999999';
+    expect(await repo.findMemory(unknown)).toBeNull();
+    expect(await repo.findMemory(unknown)).toBeNull();
+    expect((await repo.listUsers()).some((u) => u.id === unknown)).toBe(false);
+  });
+
+  it('findMemory returns all call summaries, newest first', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('5'.repeat(64), '5555');
+    for (let i = 0; i < 5; i++) {
+      await repo.saveCallSummary(a, { startedAt: new Date(2026, 0, i + 1), endedAt: new Date(2026, 0, i + 1), summary: `s${i}`, openThreads: [] });
+    }
+    const memory = await repo.findMemory(a);
+    expect(memory?.recentSummaries).toHaveLength(5);
+    expect(memory?.recentSummaries[0]?.summary).toBe('s4');
+  });
+
+  it('deleteUser removes the user with their data and reports whether it existed', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('6'.repeat(64), '6666');
+    await repo.upsertDeceased(a, { name: 'דוד' });
+    expect(await repo.deleteUser(a)).toBe(true);
+    expect(await repo.findMemory(a)).toBeNull();
+    expect(await repo.deleteUser(a)).toBe(false);
+  });
+});
+
+describe('escapeLike', () => {
+  it('escapes backslash, percent and underscore', () => {
+    expect(escapeLike('a%b_c\\d')).toBe('a\\%b\\_c\\\\d');
   });
 });

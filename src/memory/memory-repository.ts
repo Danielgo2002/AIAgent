@@ -6,12 +6,20 @@ import type {
   CallSummaryInput,
   CompanionNote,
   DeceasedInput,
+  ListUsersParams,
   MemoryRepository,
+  UserListItem,
   UserMemory,
   UserUpdate,
 } from './types.js';
 
 const RECENT_SUMMARIES = 3;
+const MAX_LIST = 200;
+
+/** Escapes LIKE wildcards so user search text is matched literally. */
+export function escapeLike(input: string): string {
+  return input.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
 
 /** Drops undefined values so a partial update never erases existing data. */
 function defined<T extends object>(input: T): Partial<T> {
@@ -27,26 +35,59 @@ export class DrizzleMemoryRepository implements MemoryRepository {
 
   async loadMemory(userId: string): Promise<UserMemory> {
     await this.ensureUser(userId);
-    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
-    if (!user) throw new Error(`User ${userId} not found`);
+    const memory = await this.readMemory(userId, RECENT_SUMMARIES);
+    if (!memory) throw new Error(`User ${userId} not found`);
+    return memory;
+  }
 
-    const dead = await this.db
-      .select()
-      .from(deceased)
-      .where(eq(deceased.userId, userId))
-      .orderBy(deceased.createdAt);
+  async findMemory(userId: string): Promise<UserMemory | null> {
+    return this.readMemory(userId);
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    const rows = await this.db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
+    return rows.length > 0;
+  }
+
+  async listUsers({ q = '', limit = 50 }: ListUsersParams = {}): Promise<UserListItem[]> {
+    const term = q.trim();
+    const pattern = `%${escapeLike(term)}%`;
+    const capped = Math.min(Math.max(limit, 1), MAX_LIST);
+    const result = await this.db.execute(sql`
+      select u.id,
+             u.first_name as "firstName",
+             u.phone_last4 as "phoneLast4",
+             (select max(c.ended_at) from call_summaries c where c.user_id = u.id) as "lastCallAt",
+             (select count(*)::int from call_summaries c where c.user_id = u.id) as "callCount",
+             (select count(*)::int from deceased d where d.user_id = u.id) as "deceasedCount"
+      from users u
+      where ${term} = ''
+         or u.first_name ilike ${pattern} escape '\\'
+         or u.phone_last4 = ${term}
+         or exists (select 1 from deceased d where d.user_id = u.id and d.name ilike ${pattern} escape '\\')
+      order by "lastCallAt" desc nulls last, u.created_at desc
+      limit ${capped}
+    `);
+    return (result.rows as unknown as Array<Omit<UserListItem, 'lastCallAt'> & { lastCallAt: string | Date | null }>).map(
+      (row) => ({ ...row, lastCallAt: row.lastCallAt === null ? null : new Date(row.lastCallAt) }),
+    );
+  }
+
+  private async readMemory(userId: string, summaryLimit?: number): Promise<UserMemory | null> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
+    if (!user) return null;
+    const dead = await this.db.select().from(deceased).where(eq(deceased.userId, userId)).orderBy(deceased.createdAt);
     const companion = await this.db
       .select()
       .from(companionPreferences)
       .where(eq(companionPreferences.userId, userId))
       .orderBy(companionPreferences.createdAt);
-    const recentSummaries = await this.db
+    const summariesQuery = this.db
       .select()
       .from(callSummaries)
       .where(eq(callSummaries.userId, userId))
-      .orderBy(desc(callSummaries.startedAt))
-      .limit(RECENT_SUMMARIES);
-
+      .orderBy(desc(callSummaries.startedAt));
+    const recentSummaries = summaryLimit ? await summariesQuery.limit(summaryLimit) : await summariesQuery;
     return { user, deceased: dead, companion, recentSummaries };
   }
 

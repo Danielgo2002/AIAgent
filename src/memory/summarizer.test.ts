@@ -17,6 +17,9 @@ const repo = (): MemoryRepository => ({
   addCompanionNote: vi.fn().mockResolvedValue(undefined),
   findOrCreateUserByPhoneHash: vi.fn(),
   clearMemory: vi.fn().mockResolvedValue(undefined),
+  listUsers: vi.fn(),
+  findMemory: vi.fn(),
+  deleteUser: vi.fn(),
 });
 
 const analysis: CallAnalysis = {
