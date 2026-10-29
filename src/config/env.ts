@@ -6,6 +6,7 @@ const schema = z.object({
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
   PHONE_HASH_KEY: z.string().min(32),
+  ADMIN_TOKEN: z.string().min(16),
   PHONE_AUDIO_CLEANUP: z.enum(['none', 'openai', 'bvc']).default('none'),
   PORT: z.coerce.number().int().default(3000),
   DATABASE_URL: z.string().min(1).default('postgres://postgres:postgres@localhost:5433/podcusts'),
