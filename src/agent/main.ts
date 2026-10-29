@@ -16,6 +16,7 @@ import { createIdoMasalaTool, createMemoryTools, createModeTools, langchainTools
 import type { MemoryToolEvent } from './tools/memory-tools.js';
 import type { UserMemory } from '../memory/types.js';
 import { buildTranscriptionPrompt } from './phone-profile.js';
+import { notifyAgentEvent } from '../events/agent-events.js';
 
 const log = createLogger('agent');
 
@@ -46,6 +47,20 @@ export default defineAgent({
     );
     callLog.info({ anonymous: userId === null }, userId === null ? 'anonymous call' : 'call started');
     callLog.info({ isSip, cleanup: isSip ? env.PHONE_AUDIO_CLEANUP : 'n/a' }, 'channel profile');
+
+    // Dashboard feed; never allowed to affect the call.
+    const emit = (event: { kind: 'memory' | 'call_started' | 'call_ended'; tool?: string; input?: Record<string, unknown> }) => {
+      if (!userId) return;
+      notifyAgentEvent(db, { userId, at: new Date().toISOString(), ...event }).catch((err) =>
+        callLog.error({ err }, 'failed to notify dashboard'),
+      );
+    };
+    const emitCallEnded = async () => {
+      if (!userId) return;
+      await notifyAgentEvent(db, { userId, kind: 'call_ended', at: new Date().toISOString() }).catch((err) =>
+        callLog.error({ err }, 'failed to notify call end'),
+      );
+    };
 
     // A memory failure must never prevent the call from happening.
     let memory: UserMemory | null = null;
@@ -108,7 +123,9 @@ export default defineAgent({
             ),
           ]);
         }
+        await emitCallEnded();
       } catch (err) {
+        await emitCallEnded();
         callLog.error({ err }, 'failed to save call summary');
       } finally {
         await close();
@@ -124,6 +141,7 @@ export default defineAgent({
         })
         .then(() => callLog.info({ tool: event.tool }, 'memory event published to UI'))
         .catch((err) => callLog.error({ err }, 'failed to publish memory event'));
+      emit({ kind: 'memory', tool: event.tool, input: event.input });
     };
 
     const modeController: ModeController = {
@@ -140,6 +158,7 @@ export default defineAgent({
       createIdoMasalaTool(publishEvent),
     ]);
 
+    emit({ kind: 'call_started' });
     await session.start({
       agent: assistant,
       room: ctx.room,
