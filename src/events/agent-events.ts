@@ -91,6 +91,11 @@ export class AgentEventListener implements AgentEventSource {
     client.on('end', () => this.scheduleReconnect());
     await client.connect();
     await client.query(`LISTEN ${AGENT_EVENTS_CHANNEL}`);
+    if (this.stopped) {
+      // stop() ran while we were connecting; do not leave this connection open.
+      await client.end().catch(() => {});
+      return;
+    }
     this.client = client;
   }
 
