@@ -13,6 +13,8 @@ import { buildGreeting, buildInstructions } from './instructions.js';
 import { createLogger } from '../logger.js';
 import { createIdoMasalaTool, createMemoryTools, createModeTools, langchainTools, type ModeController } from './tools/index.js';
 import type { MemoryToolEvent } from './tools/memory-tools.js';
+import type { UserMemory } from '../memory/types.js';
+import { buildTranscriptionPrompt } from './phone-profile.js';
 
 const log = createLogger('agent');
 
@@ -35,19 +37,22 @@ export default defineAgent({
       { kind: participant.kind, attributeKeys: Object.keys(participant.attributes) },
       'caller joined',
     );
+    const isSip = participant.kind === ParticipantKind.SIP;
     const userId = await resolveUserId(
-      { isSip: participant.kind === ParticipantKind.SIP, attributes: participant.attributes },
+      { isSip, attributes: participant.attributes },
       repo,
       env.PHONE_HASH_KEY,
     );
     callLog.info({ anonymous: userId === null }, userId === null ? 'anonymous call' : 'call started');
+    callLog.info({ isSip, cleanup: isSip ? env.PHONE_AUDIO_CLEANUP : 'n/a' }, 'channel profile');
 
     // A memory failure must never prevent the call from happening.
+    let memory: UserMemory | null = null;
     let memoryBlock = '';
     if (userId) {
       const loadStarted = Date.now();
       try {
-        const memory = await repo.loadMemory(userId);
+        memory = await repo.loadMemory(userId);
         memoryBlock = formatMemory(memory);
         callLog.info(
           { ms: Date.now() - loadStarted, deceased: memory.deceased.length, summaries: memory.recentSummaries.length, returning: memoryBlock !== '' },
@@ -63,7 +68,14 @@ export default defineAgent({
         apiKey: env.OPENAI_API_KEY,
         voice: 'marin',
         turnDetection: { type: 'semantic_vad', eagerness: 'medium' },
-        inputAudioTranscription: { model: 'gpt-4o-transcribe', language: 'he' },
+        inputAudioTranscription: {
+          model: 'gpt-4o-transcribe',
+          language: 'he',
+          ...(isSip ? { prompt: buildTranscriptionPrompt(memory) } : {}),
+        },
+        ...(isSip && env.PHONE_AUDIO_CLEANUP === 'openai'
+          ? { inputAudioNoiseReduction: { type: 'near_field' as const } }
+          : {}),
       }),
     });
 
@@ -115,12 +127,12 @@ export default defineAgent({
 
     const modeController: ModeController = {
       setCompanionMode: async (on) => {
-        await assistant.updateInstructions(buildInstructions(memoryBlock, on));
+        await assistant.updateInstructions(buildInstructions(memoryBlock, on, isSip));
         callLog.info({ companionMode: on }, 'companion mode changed');
       },
     };
 
-    const assistant = new HebrewAssistant(buildInstructions(memoryBlock), [
+    const assistant = new HebrewAssistant(buildInstructions(memoryBlock, false, isSip), [
       ...langchainTools,
       ...(userId ? createMemoryTools(repo, userId, publishEvent) : []),
       ...createModeTools(modeController, publishEvent),
