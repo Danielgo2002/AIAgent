@@ -1,3 +1,5 @@
+import { PHONE_INSTRUCTIONS } from './phone-profile.js';
+
 const BASE_INSTRUCTIONS = `
 את מלווה קולית בעברית בלבד, בשיחת טלפון עם אדם שאיבד מישהו קרוב (שכול).
 
@@ -46,8 +48,14 @@ export const IDO_MASALA_INSTRUCTIONS = `
 - אם באותה אמירה, או בכל שלב, יש גם מצוקה, אזכור של אדם יקר שנפטר, פגיעה עצמית או בקשה להפסיק, אל תצעקי בכלל: הפסיקי את הכעס מיד, קראי לכלי בשקט, וענִי בתמיכה רגועה. הקשת מבוטלת, ושלב מאוחר שנשאר לא ממשיך. כלל הבטיחות תמיד קודם.
 `.trim();
 
-export function buildInstructions(memoryBlock: string, companionMode = false): string {
-  return [BASE_INSTRUCTIONS, IDO_MASALA_INSTRUCTIONS, memoryBlock, companionMode ? COMPANION_INSTRUCTIONS : '']
+export function buildInstructions(memoryBlock: string, companionMode = false, isPhone = false): string {
+  return [
+    BASE_INSTRUCTIONS,
+    IDO_MASALA_INSTRUCTIONS,
+    memoryBlock,
+    isPhone ? PHONE_INSTRUCTIONS : '',
+    companionMode ? COMPANION_INSTRUCTIONS : '',
+  ]
     .filter(Boolean)
     .join('\n\n');
 }

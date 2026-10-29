@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatMemory } from '../memory/memory-formatter.js';
 import type { UserMemory } from '../memory/types.js';
 import { buildGreeting, buildInstructions, COMPANION_INSTRUCTIONS } from './instructions.js';
+import { PHONE_INSTRUCTIONS } from './phone-profile.js';
 
 describe('buildInstructions', () => {
   it('only requests the companion mode on explicit user request', () => {
@@ -101,5 +102,19 @@ describe('buildInstructions', () => {
     expect(t).toContain('קריאת הכלי אינה תשובה');
     expect(t).toContain('הקשת מבוטלת');
     expect(t).toContain('עידו מסלה');
+  });
+});
+
+describe('buildInstructions phone profile', () => {
+  it('adds the phone block only when isPhone is true', () => {
+    expect(buildInstructions('', false, true)).toContain(PHONE_INSTRUCTIONS);
+    expect(buildInstructions('', false, false)).not.toContain(PHONE_INSTRUCTIONS);
+    expect(buildInstructions('')).not.toContain(PHONE_INSTRUCTIONS);
+  });
+
+  it('keeps the phone block when companion mode is on', () => {
+    const text = buildInstructions('', true, true);
+    expect(text).toContain(PHONE_INSTRUCTIONS);
+    expect(text).toContain('מצב חברותי');
   });
 });
