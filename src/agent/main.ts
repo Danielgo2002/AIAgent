@@ -86,7 +86,7 @@ export default defineAgent({
       const text = item.textContent;
       if (text && (item.role === 'user' || item.role === 'assistant')) {
         transcript.push({ role: item.role, text });
-        callLog.info({ role: item.role, text }, 'transcript');
+        callLog.info({ role: item.role, text, itemId: item.id, n: transcript.length }, 'transcript');
       }
     });
 
