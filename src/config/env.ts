@@ -5,6 +5,7 @@ const schema = z.object({
   LIVEKIT_URL: z.string().url(),
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
+  PHONE_HASH_KEY: z.string().min(32),
   PORT: z.coerce.number().int().default(3000),
   DATABASE_URL: z.string().min(1).default('postgres://postgres:postgres@localhost:5433/podcusts'),
 });
