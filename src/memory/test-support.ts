@@ -3,7 +3,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { createDb } from './db.js';
 import { DrizzleMemoryRepository } from './memory-repository.js';
 
-const TEST_DATABASE_URL =
+export const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5433/podcusts_test';
 
 /** Migrated, empty test database plus a repository bound to it. */
