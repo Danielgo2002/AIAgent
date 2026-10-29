@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { desc, eq, sql } from 'drizzle-orm';
 import type { Db } from './db.js';
 import { callSummaries, companionPreferences, deceased, users } from './schema.js';
@@ -95,6 +96,16 @@ export class DrizzleMemoryRepository implements MemoryRepository {
   async saveCallSummary(userId: string, input: CallSummaryInput): Promise<void> {
     await this.ensureUser(userId);
     await this.db.insert(callSummaries).values({ userId, ...input });
+  }
+
+  async findOrCreateUserByPhoneHash(phoneHash: string): Promise<string> {
+    await this.db
+      .insert(users)
+      .values({ id: randomUUID(), phoneHash })
+      .onConflictDoNothing({ target: users.phoneHash });
+    const [row] = await this.db.select({ id: users.id }).from(users).where(eq(users.phoneHash, phoneHash));
+    if (!row) throw new Error('failed to resolve user for phone hash');
+    return row.id;
   }
 
   async clearMemory(userId: string): Promise<void> {

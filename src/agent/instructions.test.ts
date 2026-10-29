@@ -41,7 +41,7 @@ describe('buildInstructions', () => {
   it('has no slash or parenthesized gender forms in the full prompt with memory', () => {
     const now = new Date();
     const sample: UserMemory = {
-      user: { id: 'u1', firstName: 'נועה', addressAs: 'נועה', gender: 'female', notes: 'מעדיפה שקט', createdAt: now, updatedAt: now },
+      user: { id: 'u1', firstName: 'נועה', addressAs: 'נועה', gender: 'female', notes: 'מעדיפה שקט', phoneHash: null, createdAt: now, updatedAt: now },
       deceased: [
         { id: 'd1', userId: 'u1', name: 'דוד', relationship: 'אב', dateOfDeath: '2025-03-01', circumstances: null, notes: 'אהב שחמט', createdAt: now },
       ],

@@ -52,6 +52,8 @@ export interface MemoryRepository {
   updateUser(userId: string, input: UserUpdate): Promise<void>;
   addCompanionNote(userId: string, input: CompanionNote): Promise<void>;
   saveCallSummary(userId: string, input: CallSummaryInput): Promise<void>;
+  /** Atomically finds the user with this phone hash or creates one; returns the user id. */
+  findOrCreateUserByPhoneHash(phoneHash: string): Promise<string>;
   /** Deletes the user and, by cascade, all their memory. */
   clearMemory(userId: string): Promise<void>;
 }

@@ -86,4 +86,27 @@ describe('DrizzleMemoryRepository', () => {
     await repo.clearMemory(USER);
     expect((await repo.loadMemory(USER)).companion).toEqual([]);
   });
+
+  it('findOrCreateUserByPhoneHash returns the same user for the same hash', async () => {
+    const first = await repo.findOrCreateUserByPhoneHash('a'.repeat(64));
+    const second = await repo.findOrCreateUserByPhoneHash('a'.repeat(64));
+    const other = await repo.findOrCreateUserByPhoneHash('b'.repeat(64));
+    expect(second).toBe(first);
+    expect(other).not.toBe(first);
+  });
+
+  it('findOrCreateUserByPhoneHash creates exactly one user under concurrent calls', async () => {
+    const ids = await Promise.all(
+      Array.from({ length: 10 }, () => repo.findOrCreateUserByPhoneHash('c'.repeat(64))),
+    );
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it('keeps each caller memory separate', async () => {
+    const a = await repo.findOrCreateUserByPhoneHash('d'.repeat(64));
+    const b = await repo.findOrCreateUserByPhoneHash('e'.repeat(64));
+    await repo.upsertDeceased(a, { name: 'דוד' });
+    expect((await repo.loadMemory(a)).deceased).toHaveLength(1);
+    expect((await repo.loadMemory(b)).deceased).toHaveLength(0);
+  });
 });

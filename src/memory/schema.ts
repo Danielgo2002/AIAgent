@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   addressAs: text('address_as'),
   gender: text('gender', { enum: ['male', 'female', 'other'] }),
   notes: text('notes'),
+  phoneHash: text('phone_hash').unique('users_phone_hash_unique'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
