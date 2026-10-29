@@ -5,46 +5,77 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>סוכן קולי</title>
   <style>
-    :root { color-scheme: dark; --bg:#111; --panel:#1b1b1b; --line:#333; --muted:#9a9a9a; --accent:#7cc4ff; --danger:#ff6b6b; }
+    :root { color-scheme: dark; --bg:#111; --panel:#1b1b1b; --line:#333; --muted:#9a9a9a; --accent:#7cc4ff; --danger:#ff6b6b; --ok:#5ddf9a; }
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #eee; }
-    header, main { max-width: 960px; margin: 0 auto; padding: 1rem 16px; }
-    header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 1rem 16px; max-width: 1200px; margin: 0 auto; }
     h1 { font-size: 1.3rem; margin: 0; flex: 1; }
-    h2 { font-size: 1rem; margin: 0 0 .5rem; color: var(--accent); }
-    button { font: inherit; padding: .55rem 1.3rem; border: 0; border-radius: 999px; cursor: pointer; }
-    button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    h2 { font-size: 1.1rem; margin: 0 0 .75rem; color: var(--accent); }
+    button { font: inherit; padding: .5rem 1.2rem; border: 0; border-radius: 999px; cursor: pointer; }
     button:disabled { opacity: .5; cursor: default; }
-    #status { color: var(--muted); }
-    section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    input[type=text], input[type=search], input[type=password] { font: inherit; padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--line); background: #0d0d0d; color: #eee; width: 100%; }
+    #status, .muted, .meta { color: var(--muted); }
+    .layout { display: grid; grid-template-columns: minmax(220px, 320px) 1fr; gap: 1rem; max-width: 1200px; margin: 0 auto; padding: 0 16px 2rem; }
+    @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; min-width: 0; }
+    #users { list-style: none; margin: .75rem 0 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+    #users li button { display: flex; flex-direction: column; gap: .15rem; width: 100%; text-align: start; background: transparent; color: inherit; border-radius: 8px; padding: .6rem; }
+    #users li.selected button, #users li button:hover { background: #262626; }
+    .name { font-weight: 600; }
+    .badge { align-self: flex-start; font-size: .75rem; color: #04210f; background: var(--ok); border-radius: 999px; padding: .05rem .5rem; }
+    details.sec { border-top: 1px solid var(--line); padding: .5rem 0; }
+    details.sec summary { cursor: pointer; color: var(--accent); padding: .3rem 0; }
+    .empty { color: var(--muted); font-style: italic; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; display: block; overflow-x: auto; }
     th, td { text-align: start; padding: .4rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; white-space: pre-wrap; }
     th { color: var(--muted); font-weight: 500; }
-    .empty { color: var(--muted); font-style: italic; }
-    #events { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    .delete { margin-top: 1rem; display: grid; gap: .5rem; max-width: 420px; }
+    #events { list-style: none; margin: .5rem 0 0; padding: 0; max-height: 220px; overflow-y: auto; }
     #events li { padding: .4rem 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
     #events time { color: var(--muted); margin-inline-end: .5rem; }
     #events code { color: var(--accent); direction: ltr; unicode-bidi: embed; }
+    .scope { display: flex; gap: 1rem; color: var(--muted); font-size: .9rem; }
+    #gate { max-width: 360px; margin: 20vh auto; padding: 0 16px; display: grid; gap: .75rem; }
+    #gate-error { color: var(--danger); min-height: 1.2em; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>סוכן קולי בעברית</h1>
-    <span id="status">מנותק</span>
-    <button id="mute" hidden>השתק מיקרופון</button>
-    <button id="toggle">התחל שיחה</button>
-  </header>
-  <main>
-    <section>
-      <h2>אירועי זיכרון בזמן אמת</h2>
-      <ul id="events"><li class="empty">עדיין לא נשמר דבר בשיחה הזו</li></ul>
-    </section>
-    <section><h2>פרופיל</h2><div id="profile"></div></section>
-    <section><h2>יקירים שנפטרו</h2><div id="deceased"></div></section>
-    <section><h2>העדפות למצב חברותי</h2><div id="companion"></div></section>
-    <section><h2>סיכומי שיחות</h2><div id="calls"></div></section>
-    <button id="clear" class="danger">מחק את כל ההיסטוריה</button>
-  </main>
-  <script type="module" src="/client.js"></script>
+  <div id="gate" hidden>
+    <h1>כניסה ללוח הבקרה</h1>
+    <form id="gate-form" style="display:grid;gap:.75rem">
+      <input id="gate-token" type="password" placeholder="טוקן ניהול" autocomplete="off" required />
+      <button type="submit">כניסה</button>
+    </form>
+    <div id="gate-error"></div>
+  </div>
+
+  <div id="app" hidden>
+    <header>
+      <h1>סוכן קולי בעברית</h1>
+      <span id="status">מנותק</span>
+      <button id="mute" hidden>השתק מיקרופון</button>
+      <button id="toggle">התחל שיחה</button>
+    </header>
+    <div class="layout">
+      <aside class="panel">
+        <h2>משתמשים</h2>
+        <input id="search" type="search" placeholder="חיפוש לפי שם, 4 ספרות או שם נפטר" />
+        <ul id="users"></ul>
+      </aside>
+      <main style="display:grid;gap:1rem;min-width:0">
+        <section class="panel" id="detail"><p class="empty">בחר/י משתמש</p></section>
+        <section class="panel">
+          <h2>אירועים בזמן אמת</h2>
+          <div class="scope">
+            <label><input type="radio" name="scope" value="selected" checked /> המשתמש שנבחר</label>
+            <label><input type="radio" name="scope" value="all" /> כולם</label>
+          </div>
+          <ul id="events"><li class="empty">אין אירועים עדיין</li></ul>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>
