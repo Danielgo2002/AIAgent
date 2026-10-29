@@ -17,7 +17,7 @@ describe('resolveUserId', () => {
     const repo = { findOrCreateUserByPhoneHash: vi.fn().mockResolvedValue('user-123') };
     const id = await resolveUserId({ isSip: true, attributes: { 'sip.phoneNumber': '+972 50-123-4567' } }, repo, KEY);
     expect(id).toBe('user-123');
-    expect(repo.findOrCreateUserByPhoneHash).toHaveBeenCalledWith(hashPhone('+972501234567', KEY));
+    expect(repo.findOrCreateUserByPhoneHash).toHaveBeenCalledWith(hashPhone('+972501234567', KEY), '4567');
   });
 
   it('returns null (anonymous) for a SIP caller with no valid number', async () => {

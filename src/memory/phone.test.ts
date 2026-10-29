@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hashPhone, normalizePhone } from './phone.js';
+import { hashPhone, lastFour, normalizePhone } from './phone.js';
 
 const KEY = 'k'.repeat(32);
 
@@ -42,5 +42,11 @@ describe('hashPhone', () => {
     const hash = hashPhone('+972501234567', KEY);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
     expect(hash).not.toContain('972501234567');
+  });
+});
+
+describe('lastFour', () => {
+  it('returns the last four digits of a normalized number', () => {
+    expect(lastFour('+972501234567')).toBe('4567');
   });
 });

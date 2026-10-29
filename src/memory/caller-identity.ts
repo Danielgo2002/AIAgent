@@ -1,6 +1,6 @@
 import { DEMO_USER_ID } from '../config/demo-user.js';
 import { createLogger } from '../logger.js';
-import { hashPhone, normalizePhone } from './phone.js';
+import { hashPhone, lastFour, normalizePhone } from './phone.js';
 import type { MemoryRepository } from './types.js';
 
 const log = createLogger('caller-identity');
@@ -28,7 +28,7 @@ export async function resolveUserId(
   if (!phone) return null;
 
   try {
-    return await repo.findOrCreateUserByPhoneHash(hashPhone(phone, hashKey));
+    return await repo.findOrCreateUserByPhoneHash(hashPhone(phone, hashKey), lastFour(phone));
   } catch (err) {
     log.error({ err }, 'failed to resolve caller, continuing anonymously');
     return null;

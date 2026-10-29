@@ -3,7 +3,7 @@ import { finalizeCall, type CallAnalysis } from './summarizer.js';
 import type { MemoryRepository, UserMemory } from './types.js';
 
 const emptyMemory: UserMemory = {
-  user: { id: 'u', firstName: null, addressAs: null, gender: null, notes: null, phoneHash: null, createdAt: new Date(), updatedAt: new Date() },
+  user: { id: 'u', firstName: null, addressAs: null, gender: null, notes: null, phoneHash: null, phoneLast4: null, createdAt: new Date(), updatedAt: new Date() },
   deceased: [],
   companion: [],
   recentSummaries: [],

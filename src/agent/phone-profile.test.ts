@@ -4,7 +4,7 @@ import { buildTranscriptionPrompt, PHONE_INSTRUCTIONS } from './phone-profile.js
 
 const now = new Date();
 const memory = (over: Partial<UserMemory> = {}): UserMemory => ({
-  user: { id: 'u', firstName: 'דניאל', addressAs: null, gender: null, notes: null, phoneHash: null, createdAt: now, updatedAt: now },
+  user: { id: 'u', firstName: 'דניאל', addressAs: null, gender: null, notes: null, phoneHash: null, phoneLast4: null, createdAt: now, updatedAt: now },
   deceased: [],
   companion: [],
   recentSummaries: [],

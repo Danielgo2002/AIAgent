@@ -109,4 +109,13 @@ describe('DrizzleMemoryRepository', () => {
     expect((await repo.loadMemory(a)).deceased).toHaveLength(1);
     expect((await repo.loadMemory(b)).deceased).toHaveLength(0);
   });
+
+  it('stores last4 on create and fills it for an existing user that lacks it', async () => {
+    const id = await repo.findOrCreateUserByPhoneHash('f'.repeat(64));
+    expect((await repo.loadMemory(id)).user.phoneLast4).toBeNull();
+    await repo.findOrCreateUserByPhoneHash('f'.repeat(64), '4567');
+    expect((await repo.loadMemory(id)).user.phoneLast4).toBe('4567');
+    await repo.findOrCreateUserByPhoneHash('f'.repeat(64), '9999');
+    expect((await repo.loadMemory(id)).user.phoneLast4).toBe('4567');
+  });
 });

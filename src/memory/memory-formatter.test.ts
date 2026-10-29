@@ -10,6 +10,7 @@ const base = (): UserMemory => ({
     gender: null,
     notes: null,
     phoneHash: null,
+    phoneLast4: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   },

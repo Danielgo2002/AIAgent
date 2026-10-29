@@ -14,3 +14,5 @@ export function normalizePhone(raw: string | undefined): string | null {
 export function hashPhone(e164: string, key: string): string {
   return createHmac('sha256', key).update(e164).digest('hex');
 }
+
+export const lastFour = (e164: string): string => e164.slice(-4);

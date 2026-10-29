@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from './db.js';
 import { callSummaries, companionPreferences, deceased, users } from './schema.js';
 import type {
@@ -98,11 +98,17 @@ export class DrizzleMemoryRepository implements MemoryRepository {
     await this.db.insert(callSummaries).values({ userId, ...input });
   }
 
-  async findOrCreateUserByPhoneHash(phoneHash: string): Promise<string> {
+  async findOrCreateUserByPhoneHash(phoneHash: string, last4?: string): Promise<string> {
     await this.db
       .insert(users)
-      .values({ id: randomUUID(), phoneHash })
+      .values({ id: randomUUID(), phoneHash, phoneLast4: last4 })
       .onConflictDoNothing({ target: users.phoneHash });
+    if (last4) {
+      await this.db
+        .update(users)
+        .set({ phoneLast4: last4 })
+        .where(and(eq(users.phoneHash, phoneHash), isNull(users.phoneLast4)));
+    }
     const [row] = await this.db.select({ id: users.id }).from(users).where(eq(users.phoneHash, phoneHash));
     if (!row) throw new Error('failed to resolve user for phone hash');
     return row.id;
