@@ -1,8 +1,9 @@
 import { fileURLToPath } from 'node:url';
 import { cli, defineAgent, ServerOptions, voice, type JobContext } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
-import { DEMO_USER_ID } from '../config/demo-user.js';
+import { ParticipantKind } from '@livekit/rtc-node';
 import { loadEnv } from '../config/env.js';
+import { resolveUserId } from '../memory/caller-identity.js';
 import { createDb } from '../memory/db.js';
 import { formatMemory } from '../memory/memory-formatter.js';
 import { DrizzleMemoryRepository } from '../memory/memory-repository.js';
@@ -21,26 +22,40 @@ const MEMORY_EVENT_TOPIC = 'memory';
 export default defineAgent({
   entry: async (ctx: JobContext) => {
     const env = loadEnv();
-    const userId = DEMO_USER_ID;
     const startedAt = new Date();
     const callLog = log.child({ room: ctx.room.name });
-    callLog.info({ userId }, 'call started');
 
     const { db, close } = createDb(env.DATABASE_URL);
     const repo = new DrizzleMemoryRepository(db);
 
+    // The caller's number arrives as a participant attribute, so connect before loading memory.
+    await ctx.connect();
+    const participant = await ctx.waitForParticipant();
+    callLog.info(
+      { kind: participant.kind, attributeKeys: Object.keys(participant.attributes) },
+      'caller joined',
+    );
+    const userId = await resolveUserId(
+      { isSip: participant.kind === ParticipantKind.SIP, attributes: participant.attributes },
+      repo,
+      env.PHONE_HASH_KEY,
+    );
+    callLog.info({ anonymous: userId === null }, userId === null ? 'anonymous call' : 'call started');
+
     // A memory failure must never prevent the call from happening.
     let memoryBlock = '';
-    const loadStarted = Date.now();
-    try {
-      const memory = await repo.loadMemory(userId);
-      memoryBlock = formatMemory(memory);
-      callLog.info(
-        { ms: Date.now() - loadStarted, deceased: memory.deceased.length, summaries: memory.recentSummaries.length, returning: memoryBlock !== '' },
-        'memory loaded',
-      );
-    } catch (err) {
-      callLog.error({ err }, 'failed to load user memory, continuing without it');
+    if (userId) {
+      const loadStarted = Date.now();
+      try {
+        const memory = await repo.loadMemory(userId);
+        memoryBlock = formatMemory(memory);
+        callLog.info(
+          { ms: Date.now() - loadStarted, deceased: memory.deceased.length, summaries: memory.recentSummaries.length, returning: memoryBlock !== '' },
+          'memory loaded',
+        );
+      } catch (err) {
+        callLog.error({ err }, 'failed to load user memory, continuing without it');
+      }
     }
 
     const session = new voice.AgentSession({
@@ -65,19 +80,21 @@ export default defineAgent({
     ctx.addShutdownCallback(async () => {
       callLog.info({ lines: transcript.length }, 'call ended, finalizing');
       try {
-        await Promise.race([
-          finalizeCall({
-            repo,
-            analyzer: createOpenAiAnalyzer(env.OPENAI_API_KEY),
-            userId,
-            transcript,
-            startedAt,
-            endedAt: new Date(),
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('finalizeCall timed out')), FINALIZE_TIMEOUT_MS),
-          ),
-        ]);
+        if (userId) {
+          await Promise.race([
+            finalizeCall({
+              repo,
+              analyzer: createOpenAiAnalyzer(env.OPENAI_API_KEY),
+              userId,
+              transcript,
+              startedAt,
+              endedAt: new Date(),
+            }),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('finalizeCall timed out')), FINALIZE_TIMEOUT_MS),
+            ),
+          ]);
+        }
       } catch (err) {
         callLog.error({ err }, 'failed to save call summary');
       } finally {
@@ -105,13 +122,12 @@ export default defineAgent({
 
     const assistant = new HebrewAssistant(buildInstructions(memoryBlock), [
       ...langchainTools,
-      ...createMemoryTools(repo, userId, publishEvent),
+      ...(userId ? createMemoryTools(repo, userId, publishEvent) : []),
       ...createModeTools(modeController, publishEvent),
       createIdoMasalaTool(publishEvent),
     ]);
 
     await session.start({ agent: assistant, room: ctx.room });
-    await ctx.connect();
     callLog.info('agent ready, greeting');
     session.generateReply({ instructions: buildGreeting(memoryBlock !== '') });
   },
